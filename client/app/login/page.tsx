@@ -22,7 +22,6 @@ export default function LoginPage() {
                 password,
             });
 
-            // ✅ Save user + token in context
             setAuth({
                 user: res.data.user,
                 token: res.data.token,
@@ -32,7 +31,7 @@ export default function LoginPage() {
             if (res.data.user.role === "Admin") {
                 window.location.href = "/admin";
             } else {
-                window.location.href = "/dashboard";
+                window.location.href = "/";
             }
 
         } catch (error: any) {

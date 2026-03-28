@@ -14,13 +14,13 @@ export default function Footer() {
 
                     {/* Legal Links */}
                     <div className="flex flex-wrap justify-center gap-x-8 gap-y-2">
-                        <a href="/privacy" className="hover:text-white transition-colors">
+                        <a href="/" className="hover:text-white transition-colors">
                             Privacy Policy
                         </a>
-                        <a href="/terms" className="hover:text-white transition-colors">
+                        <a href="/" className="hover:text-white transition-colors">
                             Terms of Service
                         </a>
-                        <a href="/cookies" className="hover:text-white transition-colors">
+                        <a href="/" className="hover:text-white transition-colors">
                             Cookie Policy
                         </a>
                     </div>
