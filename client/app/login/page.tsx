@@ -7,6 +7,7 @@ import Footer from '@/components/Footer/Footer';
 import { useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '@/context/auth';
+import toast, { Toaster } from 'react-hot-toast';
 
 export default function LoginPage() {
     const [auth, setAuth] = useAuth();
@@ -16,8 +17,20 @@ export default function LoginPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        if (!email || !password) {
+            toast.error("Please fill in both fields");
+            return;
+        }
+
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            toast.error("Please enter a valid email address");
+            return;
+        }
+
         try {
-            const res = await axios.post(`${process.env.NEXT_PUBLIC_API }/api/auth/login`, {
+            const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
                 email,
                 password,
             });
@@ -26,6 +39,7 @@ export default function LoginPage() {
                 user: res.data.user,
                 token: res.data.token,
             });
+            toast.success("Login successful!");
 
             // (Optional) redirect based on role
             if (res.data.user.role === "Admin") {
@@ -35,12 +49,20 @@ export default function LoginPage() {
             }
 
         } catch (error: any) {
-            console.error("Login failed:", error?.response?.data || error.message);
+            // Handle specific error messages from backend
+            if (error?.response?.data?.message === "User not found") {
+                toast.error("Email not found. Please check your email address.");
+            } else if (error?.response?.data?.message === "Password incorrect") {
+                toast.error("Incorrect password. Please try again.");
+            } else {
+                toast.error(error?.response?.data?.message || "Login failed. Please try again.");
+            }
         }
     };
 
     return (
         <div className="min-h-screen bg-zinc-50 flex flex-col">
+            <Toaster />
             <Navbar />
 
             <div className="flex-1 flex items-center justify-center px-6 py-12">

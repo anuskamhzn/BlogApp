@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { User, LogOut, LayoutDashboard  } from 'lucide-react';
+import { User, LogOut, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '@/context/auth';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -32,7 +32,11 @@ export default function Navbar() {
     return (
         <nav className="bg-white border-b sticky top-0 z-50">
             <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
-                <div className="text-2xl font-semibold text-zinc-900">Blogify</div>
+                <div className="text-2xl font-semibold text-zinc-900">
+                    <Link href='/'>
+                        Blogify
+                    </Link>
+                </div>
 
                 <div className="flex items-center gap-8">
                     <Link
@@ -49,7 +53,7 @@ export default function Navbar() {
                     </Link>
                     {auth.user && (
                         <Link
-                            href="/create"
+                            href="/blog/create"
                             className="text-zinc-700 hover:text-zinc-900 font-medium transition-colors"
                         >
                             Write

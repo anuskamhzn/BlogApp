@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import {connectDB} from './config/db.js';
 
 import authRouter from './routes/authRoute.js';
+import blogRouter from './routes/blogRoute.js';
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ app.get('/', (req,res) => {
 });
 
 app.use('/api/auth', authRouter);
+app.use('/api/blog', blogRouter);
 
 const PORT = process.env.PORT || 5000;
 

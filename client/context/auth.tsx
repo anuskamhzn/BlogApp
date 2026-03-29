@@ -29,7 +29,7 @@ const AuthProvider = ({ children }: any) => {
     }
   }, [auth?.token]);
 
-  // ✅ Save to localStorage
+  // Save to localStorage
   useEffect(() => {
     if (auth?.token) {
       localStorage.setItem("auth", JSON.stringify(auth));
