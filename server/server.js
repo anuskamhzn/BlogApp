@@ -5,6 +5,7 @@ import {connectDB} from './config/db.js';
 
 import authRouter from './routes/authRoute.js';
 import blogRouter from './routes/blogRoute.js';
+import adminRouter from './routes/adminRoute.js';
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ app.get('/', (req,res) => {
 
 app.use('/api/auth', authRouter);
 app.use('/api/blog', blogRouter);
+app.use('/api/admin', adminRouter);
 
 const PORT = process.env.PORT || 5000;
 

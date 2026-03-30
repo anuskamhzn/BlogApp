@@ -11,16 +11,22 @@ const AuthProvider = ({ children }: any) => {
     token: "",
   });
 
-  // ✅ Load from localStorage ONLY on client
+  // Load from localStorage
   useEffect(() => {
     const storedData = localStorage.getItem("auth");
     if (storedData) {
-      const parsedData = JSON.parse(storedData);
-      setAuth(parsedData);
+      const parsed = JSON.parse(storedData);
+      
+      // Normalize role to lowercase for consistency
+      if (parsed.user?.role) {
+        parsed.user.role = parsed.user.role.toLowerCase();
+      }
+      
+      setAuth(parsed);
     }
   }, []);
 
-  // ✅ Set axios header
+  // Set axios header
   useEffect(() => {
     if (auth?.token) {
       axios.defaults.headers.common["Authorization"] = `Bearer ${auth.token}`;

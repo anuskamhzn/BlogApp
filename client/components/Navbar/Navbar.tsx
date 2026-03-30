@@ -1,33 +1,31 @@
-// components/Navbar.tsx
 'use client';
 
 import Link from 'next/link';
 import { User, LogOut, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '@/context/auth';
-import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function Navbar() {
-    const [auth, setAuth] = useAuth();
+    const [auth] = useAuth();        // Removed setAuth since we don't need it here
     const router = useRouter();
 
-    // Handle user logout
     const handleLogout = () => {
-        setAuth({
-            user: null,
-            token: "",
-        });
         localStorage.removeItem("auth");
-        router.push('/login');
+        // Optional: clear context
+        window.location.href = '/login';   // Force reload to clear everything cleanly
     };
 
-    // Initialize auth state from localStorage on component mount
-    useEffect(() => {
-        const storedAuth = localStorage.getItem("auth");
-        if (storedAuth) {
-            setAuth(JSON.parse(storedAuth));
+    // Smart Dashboard Navigation
+    const goToDashboard = () => {
+        const role = auth?.user?.role?.toLowerCase();
+        
+        if (role === "admin") {
+            router.push('/admin');
+        } else {
+            router.push('/dashboard');
         }
-    }, [setAuth]);
+    };
 
     return (
         <nav className="bg-white border-b sticky top-0 z-50">
@@ -51,7 +49,8 @@ export default function Navbar() {
                     >
                         All Blogs
                     </Link>
-                    {auth.user && (
+
+                    {auth?.user && (
                         <Link
                             href="/blog/create"
                             className="text-zinc-700 hover:text-zinc-900 font-medium transition-colors"
@@ -69,7 +68,7 @@ export default function Navbar() {
                         <div className="absolute right-0 mt-1 w-56 bg-white rounded-2xl shadow-xl border border-zinc-100 py-2 
                         opacity-0 invisible group-hover:opacity-100 group-hover:visible 
                         transition-all duration-200 z-50">
-                            {!auth.user ? (
+                            {!auth?.user ? (
                                 <>
                                     <Link
                                         href="/login"
@@ -85,22 +84,24 @@ export default function Navbar() {
                                     </Link>
                                 </>
                             ) : (
-                                // Show user info and logout when logged in
                                 <>
                                     <div className="px-5 py-3 border-b border-zinc-100">
                                         <p className="text-sm font-medium text-zinc-900">{auth.user.name}</p>
                                         <p className="text-xs text-zinc-500 truncate">{auth.user.email}</p>
                                     </div>
-                                    <Link
-                                        href="/dashboard"
-                                        className="flex items-center gap-2 px-5 py-3 hover:bg-zinc-100 text-zinc-700 font-medium transition-colors"
+
+                                    {/* Smart Dashboard Link */}
+                                    <button
+                                        onClick={goToDashboard}
+                                        className="w-full flex items-center gap-2 px-5 py-3 hover:bg-zinc-100 text-zinc-700 font-medium transition-colors text-left"
                                     >
                                         <LayoutDashboard className="w-4 h-4" />
                                         Dashboard
-                                    </Link>
+                                    </button>
+
                                     <button
                                         onClick={handleLogout}
-                                        className="w-full flex items-center gap-2 px-5 py-3 hover:bg-zinc-100 text-zinc-700 font-medium transition-colors border-t border-zinc-100"
+                                        className="w-full flex items-center gap-2 px-5 py-3 hover:bg-zinc-100 text-zinc-700 font-medium transition-colors border-t border-zinc-100 text-left"
                                     >
                                         <LogOut className="w-4 h-4" />
                                         Logout

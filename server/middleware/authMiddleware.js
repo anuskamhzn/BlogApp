@@ -57,5 +57,6 @@ const isAdmin = async (req, res, next) => {
 };
 
 export default {
-  authenticate, isAdmin
+  authenticate, 
+  isAdmin
 };

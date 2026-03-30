@@ -8,11 +8,13 @@ import { useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '@/context/auth';
 import toast, { Toaster } from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
     const [auth, setAuth] = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -41,12 +43,16 @@ export default function LoginPage() {
             });
             toast.success("Login successful!");
 
-            // (Optional) redirect based on role
-            if (res.data.user.role === "Admin") {
-                window.location.href = "/admin";
-            } else {
-                window.location.href = "/";
-            }
+            // Small delay to let context update properly
+            setTimeout(() => {
+                const userRole = res.data.user.role?.toLowerCase();
+
+                if (userRole === "admin") {
+                    router.push('/admin');
+                } else {
+                    router.push('/');
+                }
+            }, 150);
 
         } catch (error: any) {
             // Handle specific error messages from backend

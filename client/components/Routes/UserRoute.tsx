@@ -1,28 +1,52 @@
+// components/Routes/AdminRoute.tsx
 "use client";
 
 import { useAuth } from "@/context/auth";
 import { useRouter } from "next/navigation";
-import { useEffect, ReactNode } from "react";
+import { useEffect, useState, ReactNode } from "react";
 
-type UserRouteProps = {
+type AdminRouteProps = {
   children: ReactNode;
 };
 
-type AuthType = {
-  user?: unknown; // replace `unknown` with your actual user type if available
-};
-
-const UserRoute = ({ children }: UserRouteProps) => {
-  const [auth] = useAuth() as [AuthType];
+const AdminRoute = ({ children }: AdminRouteProps) => {
+  const [auth] = useAuth();
   const router = useRouter();
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    if (!auth?.user) {
-      router.push("/login");
-    }
-  }, [auth, router]);
+    // Read directly from localStorage like in your old React Router code
+    const storedAuth = localStorage.getItem("auth");
+    let isUser = false;
 
-  return auth?.user ? <>{children}</> : null;
+    if (storedAuth) {
+      try {
+        const parsed = JSON.parse(storedAuth);
+        const role = parsed?.user?.role?.toLowerCase();
+        isUser = role === "user";
+      } catch (e) {
+        console.error("Failed to parse auth from localStorage");
+      }
+    }
+
+    if (!isUser) {
+      router.push("/");
+    } else {
+      setIsChecking(false);
+    }
+  }, [router]);
+
+  // Show loading while checking
+  if (isChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin w-8 h-8 border-4 border-black border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  // If we reach here, user is admin
+  return <>{children}</>;
 };
 
-export default UserRoute;
+export default AdminRoute;
