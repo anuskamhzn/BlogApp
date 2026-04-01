@@ -9,11 +9,13 @@ import axios from 'axios';
 import { useAuth } from '@/context/auth';
 import toast, { Toaster } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 export default function LoginPage() {
     const [auth, setAuth] = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -66,6 +68,10 @@ export default function LoginPage() {
         }
     };
 
+    const togglePasswordVisibility = () => {
+        setShowPassword(!showPassword);
+    };
+
     return (
         <div className="min-h-screen bg-zinc-50 flex flex-col">
             <Toaster />
@@ -94,29 +100,34 @@ export default function LoginPage() {
                                 />
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-zinc-700 mb-2">
-                                    Password
-                                </label>
+                            <div className="relative">
                                 <input
-                                    type="password"
+                                    type={showPassword ? "text" : "password"}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
-                                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl focus:outline-none focus:border-zinc-400 transition-colors text-black"
+                                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl focus:outline-none focus:border-zinc-400 transition-colors text-black pr-12"
                                     placeholder="••••••••"
                                 />
+                                <button
+                                    type="button"
+                                    onClick={togglePasswordVisibility}
+                                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-zinc-500 hover:text-zinc-700 focus:outline-none"
+                                    aria-label={showPassword ? "Hide password" : "Show password"}
+                                >
+                                    {showPassword ? (
+                                        <EyeSlashIcon className="h-5 w-5" />
+                                    ) : (
+                                        <EyeIcon className="h-5 w-5" />
+                                    )}
+                                </button>
                             </div>
 
-                            {/* <div className="flex items-center justify-between text-sm">
-                                <label className="flex items-center gap-2">
-                                    <input type="checkbox" className="w-4 h-4 accent-zinc-900" />
-                                    <span className="text-zinc-600">Remember me</span>
-                                </label>
-                                <Link href="/forgot-password" className="text-zinc-600 hover:text-zinc-900">
+                            <div className="flex items-center justify-between text-sm">
+                                <Link href="/login/forgot-password" className="text-zinc-600 hover:text-zinc-900">
                                     Forgot password?
                                 </Link>
-                            </div> */}
+                            </div>
 
                             <button
                                 type="submit"

@@ -11,44 +11,51 @@ const AllBlogs = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalBlogs, setTotalBlogs] = useState(0);
+    const limit = 9;
+
+    const fetchBlogs = async (page: number) => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const response = await axios.get(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/blog/get?page=${page}&limit=${limit}`
+            );
+
+            const data = response.data;
+
+            setBlogs(Array.isArray(data) ? data : (data?.data || data?.blogs || []));
+            setTotalBlogs(data.totalBlogs || data.total || 0);
+            setTotalPages(data.totalPages || 1);
+            setCurrentPage(data.currentPage || page);
+
+        } catch (err: any) {
+            console.error("Error fetching blogs:", err);
+            setError(err.response?.data?.message || "Failed to load blogs");
+            setBlogs([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchBlogs = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-
-                const response = await axios.get(
-                    `${process.env.NEXT_PUBLIC_API_URL}/api/blog/get`
-                );
-
-                let blogsData = response.data;
-
-                if (Array.isArray(blogsData)) {
-                    setBlogs(blogsData);
-                } else if (blogsData?.data && Array.isArray(blogsData.data)) {
-                    setBlogs(blogsData.data);
-                } else if (blogsData?.message === "No blogs found") {
-                    setBlogs([]);
-                } else {
-                    setBlogs(blogsData ? [blogsData] : []);
-                }
-            } catch (err: any) {
-                console.error("Error fetching blogs:", err);
-                setError(err.response?.data?.message || "Failed to load blogs");
-                setBlogs([]);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchBlogs();
-    }, []);
+        fetchBlogs(currentPage);
+    }, [currentPage]);
 
     // Helper to get author name safely
     const getAuthorName = (author: any): string => {
         if (!author) return 'Anonymous';
         if (typeof author === 'string') return author;
         return author.name || author.username || 'Unknown Author';
+    };
+
+    const handlePageChange = (page: number) => {
+        if (page < 1 || page > totalPages) return;
+        setCurrentPage(page);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     return (
@@ -157,6 +164,42 @@ const AllBlogs = () => {
                                     </div>
                                 </Link>
                             ))}
+
+                            {/* Pagination Controls */}
+                            {totalPages > 1 && (
+                                <div className="flex justify-center items-center gap-3 mt-12">
+                                    <button
+                                        onClick={() => handlePageChange(currentPage - 1)}
+                                        disabled={currentPage === 1}
+                                        className="px-6 py-3 border rounded-xl disabled:opacity-50 bg-gray-300 text-black/30 hover:bg-gray-100 transition"
+                                    >
+                                        ← Previous
+                                    </button>
+
+                                    <div className="flex gap-2">
+                                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => handlePageChange(pageNum)}
+                                                className={`w-10 h-10 rounded-xl font-medium transition ${currentPage === pageNum
+                                                    ? 'bg-black text-white'
+                                                    : 'border hover:bg-gray-100 text-black/40'
+                                                    }`}
+                                            >
+                                                {pageNum}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <button
+                                        onClick={() => handlePageChange(currentPage + 1)}
+                                        disabled={currentPage === totalPages}
+                                        className="px-6 py-3 border rounded-xl disabled:opacity-50 bg-gray-300 text-black/30 hover:bg-gray-100 transition"
+                                    >
+                                        Next →
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

@@ -8,6 +8,7 @@ import axios from 'axios';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import UserRoute from "@/components/Routes/UserRoute";
+import toast, { Toaster } from 'react-hot-toast';
 
 export default function Dashboard() {
   const [auth] = useAuth();
@@ -16,53 +17,55 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalBlogs, setTotalBlogs] = useState(0);
+  const limit = 9;  
+
   // Fetch user's blogs
-  useEffect(() => {
-    const fetchBlogs = async () => {
-      if (!auth?.user?.id || !auth?.token) {
-        setBlogs([]);
-        setLoading(false);
-        return;
-      }
+  const fetchBlogs = async (page: number) => {
+    if (!auth?.user?.id || !auth?.token) {
+      setBlogs([]);
+      setLoading(false);
+      return;
+    }
 
-      try {
-        setLoading(true);
-        setError(null);
+    try {
+      setLoading(true);
+      setError(null);
 
-        const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/blog/getByUserId/${auth.user.id}`,
-          {
-            headers: { Authorization: `Bearer ${auth.token}` },
-          }
-        );
-
-        let blogsData = response.data;
-
-        if (Array.isArray(blogsData)) {
-          setBlogs(blogsData);
-        } else if (blogsData?.data && Array.isArray(blogsData.data)) {
-          setBlogs(blogsData.data);
-        } else if (blogsData?.message === "No blogs found") {
-          setBlogs([]);
-        } else {
-          setBlogs(blogsData ? [blogsData] : []);
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/blog/getByUserId/${auth.user.id}?page=${page}&limit=${limit}`,
+        {
+          headers: { Authorization: `Bearer ${auth.token}` },
         }
-      } catch (err: any) {
-        console.error("Error fetching blogs:", err);
-        setError(err.response?.data?.message || "Failed to load your blogs");
-        setBlogs([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+      );
 
-    fetchBlogs();
-  }, [auth]);
+      const data = response.data;
+
+      setBlogs(Array.isArray(data) ? data : (data?.data || data?.blogs || []));
+      setTotalBlogs(data.totalBlogs || data.total || blogs.length);
+      setTotalPages(data.totalPages || Math.ceil((data.totalBlogs || 0) / limit));
+      setCurrentPage(data.currentPage || page);
+
+    } catch (err: any) {
+      console.error("Error fetching blogs:", err);
+      setError(err.response?.data?.message || "Failed to load your blogs");
+      setBlogs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBlogs(currentPage);
+  }, [auth, currentPage]);
 
   const handleEdit = (e: React.MouseEvent, blogId: string | number) => {
     e.preventDefault(); // Prevent link navigation
     e.stopPropagation();
-    router.push(`/blog/edit/${blogId}`);
+    router.push(`/user/blog/edit/${blogId}`);
   };
 
   const handleDelete = async (e: React.MouseEvent, blogId: string | number) => {
@@ -87,7 +90,7 @@ export default function Dashboard() {
       // Remove from UI immediately (optimistic update)
       setBlogs((prev) => prev.filter((blog) => blog._id !== blogId && blog.id !== blogId));
 
-      alert('Blog deleted successfully!');
+      toast.success('Blog deleted successfully!');
     } catch (err: any) {
       console.error('Delete error:', err);
       const errorMsg = err.response?.data?.message || 'Failed to delete blog';
@@ -95,10 +98,17 @@ export default function Dashboard() {
     }
   };
 
+  const handlePageChange = (page: number) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <>
       <UserRoute>
         <div className="min-h-screen flex flex-col bg-gray-50">
+          <Toaster />
           <Navbar />
 
           <main className="flex-grow container mx-auto px-4 py-8 max-w-7xl">
@@ -108,7 +118,7 @@ export default function Dashboard() {
                 <h1 className="text-3xl font-bold text-gray-900">My Dashboard</h1>
                 <p className="text-gray-600 mt-1">Manage your blogs and track performance</p>
               </div>
-              <Link href="/blog/create">
+              <Link href="/user/blog/create">
                 <button
                   className="bg-black hover:bg-zinc-800 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all shadow-md hover:shadow-lg cursor-pointer"
                 >
@@ -160,7 +170,7 @@ export default function Dashboard() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                   </svg>
                   <p className="text-gray-500">No blogs yet. Start writing your first blog!</p>
-                  <Link href="/create">
+                  <Link href="/user/blog/create">
                     <button className="mt-4 text-black hover:text-zinc-800 font-medium">
                       Write your first blog →
                     </button>
@@ -171,7 +181,7 @@ export default function Dashboard() {
                   {blogs.map((blog) => (
                     <Link
                       key={blog._id || blog.id}
-                      href={`/dashboard/${blog._id || blog.id}`}
+                      href={`/user/dashboard/${blog._id || blog.id}`}
                       className="block hover:bg-gray-50 transition-colors group"
                     >
                       <div className="p-6">
@@ -217,6 +227,42 @@ export default function Dashboard() {
                       </div>
                     </Link>
                   ))}
+
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex justify-center items-center gap-3 mt-12">
+                      <button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="px-6 py-3 border rounded-xl disabled:opacity-50 bg-gray-300 text-black/30 hover:bg-gray-100 transition"
+                      >
+                        ← Previous
+                      </button>
+
+                      <div className="flex gap-2">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                          <button
+                            key={pageNum}
+                            onClick={() => handlePageChange(pageNum)}
+                            className={`w-10 h-10 rounded-xl font-medium transition ${currentPage === pageNum
+                              ? 'bg-black text-white'
+                              : 'border hover:bg-gray-100 text-black/40'
+                              }`}
+                          >
+                            {pageNum}
+                          </button>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="px-6 py-3 border rounded-xl disabled:opacity-50 bg-gray-300 text-black/30 hover:bg-gray-100 transition"
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

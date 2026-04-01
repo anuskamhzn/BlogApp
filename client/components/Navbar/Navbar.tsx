@@ -23,7 +23,7 @@ export default function Navbar() {
         if (role === "admin") {
             router.push('/admin');
         } else {
-            router.push('/dashboard');
+            router.push('/user/dashboard');
         }
     };
 
@@ -52,7 +52,7 @@ export default function Navbar() {
 
                     {auth?.user && (
                         <Link
-                            href="/blog/create"
+                            href="/user/blog/create"
                             className="text-zinc-700 hover:text-zinc-900 font-medium transition-colors"
                         >
                             Write

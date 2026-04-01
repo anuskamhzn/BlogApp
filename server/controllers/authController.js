@@ -99,7 +99,7 @@ const login = async (req, res) => {
                 id: user._id,
                 name: user.name,
                 email: user.email,
-                role:user.role
+                role: user.role
             }
         });
     } catch (error) {
@@ -108,7 +108,36 @@ const login = async (req, res) => {
     }
 };
 
+const forgotPassword = async (req, res) => {
+    try {
+        const { email, newPassword, confirmPassword } = req.body;
+
+        // Check user
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        if (newPassword !== confirmPassword) {
+            return res.status(404).json({ message: "Password does not match" });
+        }
+
+        // Update password
+        user.password = hashedPassword;
+        await user.save();
+
+        res.json({ message: "Password updated successfully" });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
 export default {
     register,
     login,
+    forgotPassword,
 }

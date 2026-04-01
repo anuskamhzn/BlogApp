@@ -3,13 +3,31 @@ import Blog from '../models/Blog.js';
 
 import mongoose from 'mongoose';
 
-// Get all users 
+// Get all users with pagination
 const getAllUsers = async (req, res) => {
     try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const totalUsers = await User.countDocuments({ role: { $ne: 'admin' } });
+
         const users = await User.find({
-            role: { $ne: 'admin' } // Exclude users with role 'admin'
-        }).select(' name email createdAt').sort({ createdAt: -1 });
-        res.status(200).json(users);
+            role: { $ne: 'admin' }
+        })
+            .select('name email createdAt role')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        res.status(200).json({
+            success: true,
+            totalUsers,
+            totalPages: Math.ceil(totalUsers / limit),
+            currentPage: page,
+            count: users.length,
+            users
+        });
     } catch (error) {
         console.error('Error fetching users:', error);
         res.status(500).json({ message: 'Server error' });
@@ -68,13 +86,51 @@ const deleteUser = async (req, res) => {
     }
 };
 
+// Get all blogs with pagination
 const getAllBlogs = async (req, res) => {
     try {
-        const blogs = await Blog.find().sort({ createdAt: -1 });
-        res.status(200).json(blogs);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const totalBlogs = await Blog.countDocuments();
+
+        const blogs = await Blog.find()
+            .populate('author', 'name email')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        res.status(200).json({
+            success: true,
+            totalBlogs,
+            totalPages: Math.ceil(totalBlogs / limit),
+            currentPage: page,
+            count: blogs.length,
+            blogs
+        });
     } catch (error) {
         console.error('Error fetching blogs:', error);
         res.status(500).json({ message: 'Server error' });
+    }
+};
+
+const getRecentBlogs = async (req, res) => {
+    try {
+        const totalBlogs = await Blog.countDocuments();
+
+        const recentBlogs = await Blog.find()
+            .populate('author', 'name')
+            .sort({ createdAt: -1 })
+            .limit(5);
+
+        res.status(200).json({
+            totalBlogs,
+            recentBlogs,
+        });
+    } catch (error) {
+        console.error("Error fetching recent users and counts:", error);
+        res.status(500).json({ message: "Error fetching data", error: error.message });
     }
 };
 
@@ -95,7 +151,7 @@ const getBlogsById = async (req, res) => {
 
         res.status(200).json({ success: true, message: "Blog found", blog });
     } catch (error) {
-        console.error('Error fetching user:', error); 
+        console.error('Error fetching user:', error);
         res.status(500).json({ success: false, message: "Error in fetching blog", error });
     }
 };
@@ -130,6 +186,7 @@ export default {
     getUserById,
     deleteUser,
     getAllBlogs,
+    getRecentBlogs,
     getBlogsById,
     deleteBlog
 }

@@ -20,16 +20,34 @@ const createBlog = async (req, res) => {
     }
 };
 
-//Retrieves all blogs from every user, sorted by newest first. Public endpoint with no restrictions.
+// Get All Blogs - WITH PAGINATION (Public)
 const getAllBlogs = async (req, res) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-        const blogs = await Blog.find().populate('author', 'name email').sort({ createdAt: -1 });
-        res.status(200).json(blogs);
-    } catch (error) {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
 
+        const blogs = await Blog.find()
+            .populate('author', 'name email')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        const totalBlogs = await Blog.countDocuments();
+
+        res.status(200).json({
+            success: true,
+            count: blogs.length,
+            totalPages: Math.ceil(totalBlogs / limit),
+            currentPage: page,
+            totalBlogs,
+            data: blogs
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 };
 
@@ -49,7 +67,7 @@ const getBlogById = async (req, res) => {
     }
 };
 
-//Retrieves a specific blog but verifies that the authenticated user is the author. Used for authorization checks before edits/deletes.
+//Retrieves a specific blog (pagination) but verifies that the authenticated user is the author. Used for authorization checks before edits/deletes.
 const getBlogByUserId = async (req, res) => {
     try {
         const errors = validationResult(req);
@@ -57,22 +75,28 @@ const getBlogByUserId = async (req, res) => {
             return res.status(400).json({ errors: errors.array() });
         }
 
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
         const { userId } = req.params;
 
-        // Find ALL blogs by this user (not just one)
-        const blogs = await Blog.find({
-            author: userId
-        }).sort({ createdAt: -1 });   // Sort newest first
+        const blogs = await Blog.find({ author: userId })
+            .populate('author', 'name email')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
 
-        if (blogs.length === 0) {
-            return res.status(200).json({
-                message: "No blogs found",
-                data: []
-            });
-        }
+        const totalBlogs = await Blog.countDocuments({ author: userId });
 
-        res.status(200).json(blogs);   // Return array directly (cleanest)
-
+        res.status(200).json({
+            success: true,
+            count: blogs.length,
+            totalPages: Math.ceil(totalBlogs / limit),
+            currentPage: page,
+            totalBlogs,
+            data: blogs
+        });
     } catch (error) {
         console.error("Error in getBlogByUserId:", error);
         res.status(500).json({
@@ -82,18 +106,34 @@ const getBlogByUserId = async (req, res) => {
     }
 };
 
-//Retrieves all blogs written by a specific user (by their user ID). Public endpoint—anyone can view another user's blog collection.
+//Retrieves all blogs (pagination) written by a specific user (by their user ID). Public endpoint—anyone can view another user's blog collection.
 const getBlogByUser = async (req, res) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-        const blog = await Blog.find({ author: req.params.userId }).sort({ createdAt: -1 });
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
 
-        if (!blog) return res.status(400).json({ message: 'Blog not found' });
-        res.json(blog);
+        const blogs = await Blog.find({ author: req.params.userId })
+            .populate('author', 'name email')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        const totalBlogs = await Blog.countDocuments({ author: req.params.userId });
+
+        res.status(200).json({
+            success: true,
+            count: blogs.length,
+            totalPages: Math.ceil(totalBlogs / limit),
+            currentPage: page,
+            totalBlogs,
+            data: blogs || []
+        });
     } catch (error) {
-        res.status(400).json({ message: error.message });
+        res.status(500).json({ message: error.message });
     }
 };
 
@@ -106,13 +146,16 @@ const updateBlog = async (req, res) => {
         if (!blog) return res.status(404).json({ message: 'Blog not found' });
         if (blog.author.toString() !== req.user.id) return res.status(403).json({ message: 'Unauthorized user' });
 
-        const updateBlog = await Blog.findByIdAndUpdate(
+        const updatedBlog = await Blog.findByIdAndUpdate(
             req.params.id,
-            { ...req.body, updateAt: Date.now() },
-            { new: true, runValidators: true }
+            { ...req.body, updatedAt: Date.now() },   // Note: fixed typo "updateAt" → "updatedAt"
+            {
+                returnDocument: 'after',   // ← This replaces the deprecated `new: true`
+                runValidators: true
+            }
         ).populate('author', 'name email');
 
-        res.json(updateBlog);
+        res.json(updatedBlog);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

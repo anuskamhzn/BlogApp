@@ -3,60 +3,109 @@
 import { useState, useEffect } from 'react';
 import AdminNav from '@/components/Navbar/AdminNav';
 import Footer from '@/components/Footer/Footer';
-import AdminRoute from '@/components/Routes/AdminRoute';   // ← Import this
+import AdminRoute from '@/components/Routes/AdminRoute';
+import { useAuth } from '@/context/auth';
+import axios from 'axios';
+import Link from 'next/link';
 
 interface Blog {
-  id: string;
+  _id: string;
   title: string;
-  author: string;
+  author?: string;
   createdAt: string;
-  views: number;
-  status: 'published' | 'draft';
+}
+
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+  createdAt: string;
 }
 
 const AdminDashboard = () => {
-  // Dummy Data
+  const [auth] = useAuth();
+  const [blogs, setBlogs] = useState<Blog[]>([]);
+  const [users, setUsers] = useState<User[]>([]); // Fixed: changed from Blog[] to User[]
+  const [totalBlogs, setTotalBlogs] = useState<number>(0);
+  const [totalUsers, setTotalUsers] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const stats = {
-    totalBlogs: 248,
-    totalUsers: 1240,
+    totalBlogs: totalBlogs || 0,
+    totalUsers: totalUsers || 0,
   };
 
-  const recentBlogs: Blog[] = [
-    {
-      id: '1',
-      title: 'The Future of Artificial Intelligence in 2026',
-      author: 'John Doe',
-      createdAt: '2026-03-28',
-      views: 12400,
-      status: 'published',
-    },
-    {
-      id: '2',
-      title: 'Building Scalable Next.js Applications',
-      author: 'Sarah Chen',
-      createdAt: '2026-03-27',
-      views: 8900,
-      status: 'published',
-    },
-    {
-      id: '3',
-      title: 'Why Tailwind CSS is Dominating Frontend Development',
-      author: 'Alex Rivera',
-      createdAt: '2026-03-25',
-      views: 15600,
-      status: 'draft',
-    },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!auth?.token) {
+        setError("Please log in as admin");
+        setLoading(false);
+        return;
+      }
 
-  const handleDeleteBlog = (id: string) => {
-    if (confirm('Are you sure you want to delete this blog?')) {
-      alert(`Blog deleted successfully!`);
-      // TODO: Later connect with real delete API
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/admin/recent-blogs`,
+          {
+            headers: { Authorization: `Bearer ${auth.token}` },
+          }
+        );
+
+        const data = response.data;
+
+        setTotalBlogs(data.totalBlogs || 0);
+        setBlogs(Array.isArray(data.recentBlogs) ? data.recentBlogs : []);
+      } catch (err: any) {
+        // console.error("Fetch error:", err.response?.data || err.message);
+        setError(err.response?.data?.message || "Failed to load blogs. Are you logged in as admin?");
+        setBlogs([]);
+      }
+    };
+
+    const fetchUser = async () => {
+      if (!auth?.token) {
+        setError("Please log in as admin");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Don't set loading to true here if you want to keep separate loading states
+        setError(null);
+
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/admin/all-users`,
+          {
+            headers: { Authorization: `Bearer ${auth.token}` },
+          }
+        );
+
+        const data = response.data;
+
+        // Fixed: Changed from data.totalUser to data.totalUsers
+        // Changed from data.recentUser to data.users
+        setTotalUsers(data.totalUsers || 0);
+        setUsers(Array.isArray(data.users) ? data.users : []);
+      } catch (err: any) {
+        // console.error("Fetch error:", err.response?.data || err.message);
+        setError(err.response?.data?.message || "Failed to load users. Are you logged in as admin?");
+        setUsers([]);
+      } finally {
+        setLoading(false);
+      }
     }
-  };
+
+    fetchData();
+    fetchUser();
+  }, [auth]);
+
 
   return (
-    <AdminRoute>   {/* ← Protection added here */}
+    <AdminRoute>
       <div className="min-h-screen flex flex-col bg-gray-50">
         <AdminNav />
 
@@ -69,7 +118,7 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* Stats Overview */}
+          {/* Stats Overview - Total Users will show here */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
               <p className="text-gray-500 text-sm">Total Blogs</p>
@@ -82,58 +131,43 @@ const AdminDashboard = () => {
           </div>
 
           {/* Recent Blogs Section */}
-          <div className="space-y-10">
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-semibold text-gray-900">Recent Blogs</h2>
-                <a href="/admin/blogs" className="text-black hover:underline text-sm font-medium">
-                  View all →
-                </a>
-              </div>
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-semibold text-gray-900">Recent Blogs</h2>
+              <a href="/admin/blogs" className="text-black hover:underline text-sm font-medium">
+                View all →
+              </a>
+            </div>
 
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                {recentBlogs.map((blog) => (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              {loading ? (
+                <div className="p-12 text-center text-gray-500">Loading recent blogs...</div>
+              ) : error ? (
+                <div className="p-12 text-center text-red-500">{error}</div>
+              ) : blogs.length === 0 ? (
+                <div className="p-12 text-center text-gray-500">No blogs found</div>
+              ) : (
+                blogs.map((blog: any) => (
                   <div
-                    key={blog.id}
+                    key={blog._id || blog.id}
                     className="p-6 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
                   >
+                    <Link href={`/admin/blogs/${blog._id || blog.id}`}>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <h3 className="font-semibold text-lg text-gray-900">{blog.title}</h3>
+
                         <p className="text-sm text-gray-500 mt-1">
-                          By {blog.author} • {new Date(blog.createdAt).toLocaleDateString()}
+                          By {blog.author?.name || blog.author || 'Unknown Author'} •{' '}
+                          {new Date(blog.createdAt).toLocaleDateString()}
                         </p>
-                        <div className="flex items-center gap-4 mt-3">
-                          <span className="text-sm text-gray-500">
-                            {blog.views.toLocaleString()} views
-                          </span>
-                          <span
-                            className={`text-xs px-3 py-1 rounded-full font-medium ${
-                              blog.status === 'published'
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-amber-100 text-amber-700'
-                            }`}
-                          >
-                            {blog.status.toUpperCase()}
-                          </span>
-                        </div>
                       </div>
 
-                      <div className="flex gap-3">
-                        <button className="px-5 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-                          View
-                        </button>
-                        <button
-                          onClick={() => handleDeleteBlog(blog.id)}
-                          className="px-5 py-2 text-sm text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition"
-                        >
-                          Delete
-                        </button>
-                      </div>
                     </div>
+                    </Link>
                   </div>
-                ))}
-              </div>
+                ))
+              )}
             </div>
           </div>
         </main>
