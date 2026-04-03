@@ -23,31 +23,42 @@ export default function EditBlog() {
     const [initialLoading, setInitialLoading] = useState(true);
 
     // Fetch existing blog data
+    // Fetch existing blog data - FIXED
     useEffect(() => {
         const fetchBlog = async () => {
-            if (!id || !auth?.token) return;
+            if (!id || !auth?.token || !auth?.user?.id) return;
 
             try {
+                setInitialLoading(true);
+
+                // Option 1: Best way - Use a dedicated endpoint (recommended)
+                // But since you don't have getBlogById for authenticated user, use this:
+
                 const { data } = await axios.get(
-                    `${process.env.NEXT_PUBLIC_API_URL}/api/blog/getByUserId/${auth.user.id}`, // or a dedicated /api/blog/${id} endpoint
-                    { headers: { Authorization: `Bearer ${auth.token}` } }
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/blog/getByUserId/${auth.user.id}`,
+                    {
+                        headers: { Authorization: `Bearer ${auth.token}` }
+                    }
                 );
 
-                // Find the specific blog
-                const blog = Array.isArray(data) 
-                    ? data.find((b: any) => b._id === id || b.id === id)
-                    : data;
+                // FIXED: Access the actual blogs array from .data
+                const blogsArray = data?.data || data;   // handle both {data: [...]} and direct array
+
+                const blog = Array.isArray(blogsArray)
+                    ? blogsArray.find((b: any) => b._id === id || b.id === id)
+                    : null;
 
                 if (blog) {
                     setTitle(blog.title || '');
                     setContent(blog.content || '');
                 } else {
-                    toast.error("Blog not found");
+                    toast.error("Blog not found or you don't have permission to edit it");
                     router.push('/user/dashboard');
                 }
-            } catch (err) {
-                console.error(err);
-                toast.error("Failed to load blog");
+            } catch (err: any) {
+                console.error("Error fetching blog for edit:", err);
+                toast.error(err.response?.data?.message || "Failed to load blog");
+                router.push('/user/dashboard');
             } finally {
                 setInitialLoading(false);
             }
