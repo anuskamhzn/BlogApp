@@ -7,7 +7,6 @@ const router = express.Router();
 // Public routes
 router.get('/get', blogController.getAllBlogs);           // Supports ?page=1&limit=10
 router.get('/get/:id', blogController.getBlogById);
-router.get('/getByUser/:userId', blogController.getBlogByUser);   // Supports pagination
 
 // Protected routes (require authentication)
 router.post('/create', authMiddleware.authenticate, blogController.createBlog);

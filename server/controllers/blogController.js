@@ -106,37 +106,6 @@ const getBlogByUserId = async (req, res) => {
     }
 };
 
-//Retrieves all blogs (pagination) written by a specific user (by their user ID). Public endpoint—anyone can view another user's blog collection.
-const getBlogByUser = async (req, res) => {
-    try {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
-
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const skip = (page - 1) * limit;
-
-        const blogs = await Blog.find({ author: req.params.userId })
-            .populate('author', 'name email')
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
-
-        const totalBlogs = await Blog.countDocuments({ author: req.params.userId });
-
-        res.status(200).json({
-            success: true,
-            count: blogs.length,
-            totalPages: Math.ceil(totalBlogs / limit),
-            currentPage: page,
-            totalBlogs,
-            data: blogs || []
-        });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
-
 const updateBlog = async (req, res) => {
     try {
         const errors = validationResult(req);
@@ -183,7 +152,6 @@ export default {
     getAllBlogs,
     getBlogById,
     getBlogByUserId,
-    getBlogByUser,
     updateBlog,
     deleteBlog
 }
